@@ -1229,6 +1229,179 @@ ggplot(loadings_df, aes(x = suffix, y = prefix, fill = `Loading Value`)) +
     fill = "Loading Value"
   )
 
+# =========================================================
+# Sparse-ODPC Loadings: Basket & Country Interpretation
+# =========================================================
+
+library(readr)
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(ggplot2)
+
+loadingscomp1lag0 <- read_csv("sparse-odpc 2 comp 2 lags/loadingscomp1lag0.csv")
+loadingscomp1lag1 <- read_csv("sparse-odpc 2 comp 2 lags/loadingscomp1lag1.csv")
+loadingscomp1lag2 <- read_csv("sparse-odpc 2 comp 2 lags/loadingscomp1lag2.csv")
+
+loadingscomp2lag0 <- read_csv("sparse-odpc 2 comp 2 lags/loadingscomp2lag0.csv")
+loadingscomp2lag1 <- read_csv("sparse-odpc 2 comp 2 lags/loadingscomp2lag1.csv")
+loadingscomp2lag2 <- read_csv("sparse-odpc 2 comp 2 lags/loadingscomp2lag2.csv")
+
+tidy_loading_df <- function(df, component, lag) {
+  df %>%
+    rename(id = ...1, loading = 2) %>%
+    mutate(
+      Basket      = str_extract(id, "^CP-[A-Z0-9]+"),
+      Country     = str_extract(id, "[A-Z]{2}$"),
+      abs_loading = abs(loading),
+      Component   = component,
+      Lag         = lag
+    )
+}
+
+l1_0 <- tidy_loading_df(loadingscomp1lag0, "Comp1", 0)
+l1_1 <- tidy_loading_df(loadingscomp1lag1, "Comp1", 1)
+l1_2 <- tidy_loading_df(loadingscomp1lag2, "Comp1", 2)
+
+l2_0 <- tidy_loading_df(loadingscomp2lag0, "Comp2", 0)
+l2_1 <- tidy_loading_df(loadingscomp2lag1, "Comp2", 1)
+l2_2 <- tidy_loading_df(loadingscomp2lag2, "Comp2", 2)
+
+# Combine all loadings
+
+loadings <- bind_rows(l1_0, l1_1, l1_2, l2_0, l2_1, l2_2)
+
+
+# Baskets with large loadings
+
+basket_importance <- loadings %>%
+  group_by(Basket) %>%
+  summarise(
+    total_loading = sum(abs_loading),
+    mean_loading  = mean(abs_loading),
+    max_loading   = max(abs_loading),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(total_loading))
+
+# Plot: basket importance
+ggplot(basket_importance,
+       aes(x = reorder(Basket, total_loading),
+           y = total_loading)) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Overall Importance of HICP Baskets",
+    x = "HICP Basket",
+    y = "Cumulative Absolute Loading"
+  )
+
+
+# Countries with large loadings for specific baskets
+
+country_basket <- loadings %>%
+  group_by(Basket, Country) %>%
+  summarise(
+    total_loading = sum(abs_loading),
+    .groups = "drop"
+  )
+
+# Heatmap: country–basket dominance
+ggplot(country_basket,
+       aes(x = Basket, y = Country, fill = total_loading)) +
+  geom_tile() +
+  scale_fill_viridis_c() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Country–Basket Contributions to Sparse-ODPC Components",
+    fill = "Total Absolute Loading"
+  )
+
+
+# Highlight only countries with large contributions per basket
+dominant_countries <- loadings %>%
+  group_by(Basket) %>%
+  filter(abs_loading >= quantile(abs_loading, 0.9)) %>%  # top 20% per basket
+  ungroup()
+
+ggplot(dominant_countries,
+       aes(x = Basket, y = Country, fill = abs_loading)) +
+  geom_tile() +
+  scale_fill_viridis_c() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Countries Dominating Specific HICP Baskets",
+    fill = "Absolute Loading"
+  )
+
+
+# Choose the number of top countries to show per basket
+top_n_countries <- 3
+
+dominant_countries <- loadings %>%
+  group_by(Basket) %>%
+  slice_max(order_by = abs_loading, n = top_n_countries) %>%  # top 3 countries
+  ungroup()
+
+ggplot(dominant_countries,
+       aes(x = reorder(Country, abs_loading), y = abs_loading, fill = Component)) +
+  geom_col() +
+  facet_wrap(~ Basket, scales = "free_y") +
+  coord_flip() +
+  labs(
+    title = "Top Countries Influencing Each HICP Basket",
+    x = "Country",
+    y = "Absolute Loading",
+    fill = "Component"
+  ) +
+  theme_minimal()
+
+
+# Split by sparse dynamic component
+
+country_basket_comp <- loadings %>%
+  group_by(Basket, Country, Component) %>%
+  summarise(
+    total_loading = sum(abs_loading),
+    .groups = "drop"
+  )
+
+ggplot(country_basket_comp,
+       aes(x = Basket, y = Country, fill = total_loading)) +
+  geom_tile() +
+  facet_wrap(~ Component) +
+  scale_fill_viridis_c() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Country–Basket Contributions by Dynamic Component",
+    fill = "Total Absolute Loading"
+  )
+
+# Overall Top Countries per Basket (aggregated)
+
+agg_loadings <- loadings %>%
+  group_by(Basket, Country) %>%
+  summarise(total_abs_loading = sum(abs_loading), .groups = "drop")
+
+# Pick top N countries per basket
+top_n_countries <- 3
+dominant_overall <- agg_loadings %>%
+  group_by(Basket) %>%
+  slice_max(order_by = total_abs_loading, n = top_n_countries) %>%
+  ungroup()
+
+# Bar plot: overall top countries
+ggplot(dominant_overall,
+       aes(x = reorder(Country, total_abs_loading), y = total_abs_loading)) +
+  geom_col(fill = "steelblue") +
+  facet_wrap(~ Basket, scales = "free_y") +
+  coord_flip() +
+  labs(
+    title = "Top Countries Impacting Each HICP Basket (Overall)",
+    x = "Country",
+    y = "Total Absolute Loading"
+  ) +
+  theme_minimal()
 
 #Comparison of Sparse ODPC with other baseline models: Holt Winters and Classical PCA with ARIMA forecasting
 
