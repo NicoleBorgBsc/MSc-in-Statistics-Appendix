@@ -1357,7 +1357,7 @@ print(results_dm)
 # Section 5.4 Computational Comparison
 # ===============================
 
-#compuational comparison of BRILLINGER/GDPC AND ODPC
+#compuational comparison of BRILLINGER, GDPC AND ODPC
 
 library(readxl)
 pricesSP50addpoints <- read_excel("C:/Users/Nicole/OneDrive/Desktop/pricesSP50addpoints.xlsx")
@@ -1374,13 +1374,13 @@ spricesSP50<-ts(spricesSP50) # 1st month of 2010
 spricesSP501<-spricesSP50[1:500,1:20]
 library(tictoc)
 tic();
-fit_SP <- auto.gdpc(spricesSP501, auto_comp=TRUE,normalize = 1, niter_max = 1000,num_comp=1,k_max=1, ncores = 8)
+fit_SP <- auto.gdpc(spricesSP501, auto_comp=TRUE,normalize = 1, niter_max = 1000,num_comp=5,k_max=1, ncores = 8)
 fit_SP
 toc()
 
 library(freqdom)
 tic();
-res.dpcaT = dpca(spricesSP501, q =1, Ndpc =1) #q are the lags and NDPC is the number of components
+res.dpcaT = dpca(spricesSP501, q =1, Ndpc =5) #q are the lags and NDPC is the number of components
 toc()
 
 
@@ -1388,44 +1388,44 @@ toc()
 #T=250
 spricesSP502<-spricesSP50[1:250,1:50]
 tic();
-fit_SP <- auto.gdpc(spricesSP502, auto_comp=TRUE,normalize = 1, niter_max = 1000,num_comp=1,k_max=1, ncores = 8)
+fit_SP <- auto.gdpc(spricesSP502, auto_comp=TRUE,normalize = 1, niter_max = 1000,num_comp=5,k_max=1, ncores = 8)
 fit_SP
 toc()
 
 library(freqdom)
 tic();
-res.dpcaT = dpca(spricesSP502, q =1, Ndpc =1) #q are the lags and NDPC is the number of components
+res.dpcaT = dpca(spricesSP502, q =1, Ndpc =5) #q are the lags and NDPC is the number of components
 toc()
 
 #T=375
 spricesSP503<-spricesSP50[1:375,1:50]
 tic();
-fit_SP <- auto.gdpc(spricesSP503, auto_comp=TRUE,normalize = 1, niter_max = 1000,num_comp=1,k_max=1, ncores = 8)
+fit_SP <- auto.gdpc(spricesSP503, auto_comp=TRUE,normalize = 1, niter_max = 1000,num_comp=5,k_max=1, ncores = 8)
 fit_SP
 toc()
 
 library(freqdom)
 tic();
-res.dpcaT = dpca(spricesSP503, q =1, Ndpc =1) #q are the lags and NDPC is the number of components
+res.dpcaT = dpca(spricesSP503, q =1, Ndpc =5) #q are the lags and NDPC is the number of components
 toc()
 
 
 #T=500
 spricesSP504<-spricesSP50[1:500,1:50]
 tic();
-fit_SP <- auto.gdpc(spricesSP504, auto_comp=TRUE,normalize = 1, niter_max = 1000,num_comp=1,k_max=1, ncores = 8)
+fit_SP <- auto.gdpc(spricesSP504, auto_comp=TRUE,normalize = 1, niter_max = 1000,num_comp=5,k_max=1, ncores = 8)
 toc()
 
 library(freqdom)
 tic();
-res.dpcaT = dpca(spricesSP504, q =1, Ndpc = 1) #q are the lags and NDPC is the number of components
+res.dpcaT = dpca(spricesSP504, q =1, Ndpc = 5) #q are the lags and NDPC is the number of components
 toc()
 
 #ODPC
 #change the dataset accordingly
 tic();
-fit_SP <- crit.odpc(spricesSP501, k_list=1,max_num_comp =1) 
+fit_SP <- crit.odpc(spricesSP501, k_list=1,max_num_comp =5) 
 fit_SP
 toc()
 
-
+#repeat same process but with p=20,30,40
